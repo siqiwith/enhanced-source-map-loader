@@ -4,6 +4,17 @@
   "properties": {
     "filterSourceMappingUrl": {
       "instanceof": "Function"
+    },
+    "sourceMapUrlFormatter": {
+      "type": "object",
+      "properties": {
+        "match": {
+          "instanceof": "RegExp"
+        },
+        "formatter": {
+          "instanceof": "Function"
+        }
+      }
     }
   }
 }

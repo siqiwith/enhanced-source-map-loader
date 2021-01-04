@@ -18,6 +18,15 @@ export default async function loader(input, inputMap) {
     baseDataPath: "options",
   });
 
+  /* SIQI HACK START */
+  const sourceMapUrlFormatter = options.sourceMapUrlFormatter || {
+    match: /node_modules/,
+    formatter: function (originSourceUrl, originContext) {
+      return path.relative(originContext, originSourceUrl);
+    }
+  }
+  /* SIQI HACK END */
+
   const { sourceMappingURL, replacementString } = getSourceMappingURL(input);
 
   const callback = this.async();
@@ -68,9 +77,19 @@ export default async function loader(input, inputMap) {
 
     return;
   }
-
+  /* SIQI HACK START */
+  const context = sourceURL ? path.dirname(sourceURL) : this.context;
+  /* SIQI HACK END */
   if (sourceURL) {
-    this.addDependency(sourceURL);
+    /* SIQI HACK START */
+    let fullSourceUrl = path.resolve(context, sourceURL);
+    let formattedSourceUrl = sourceURL;
+    if (sourceMapUrlFormatter.match.test(fullSourceUrl)) {
+      formattedSourceUrl = sourceMapUrlFormatter.formatter(fullSourceUrl, this.rootContext);
+    }
+    this.addDependency(formattedSourceUrl);
+    // this.addDependency(sourceURL);
+    /* SIQI HACK END */
   }
 
   let map;
@@ -89,7 +108,9 @@ export default async function loader(input, inputMap) {
     return;
   }
 
-  const context = sourceURL ? path.dirname(sourceURL) : this.context;
+  /* SIQI HACK START */
+  // const context = sourceURL ? path.dirname(sourceURL) : this.context;
+  /* SIQI HACK END */
 
   if (map.sections) {
     // eslint-disable-next-line no-param-reassign
@@ -127,15 +148,30 @@ export default async function loader(input, inputMap) {
 
         this.emitWarning(error);
       }
+      
+      /* SIQI HACK START */
+      let formattedSourceUrl = sourceURL;
+      if (sourceURL) {
+        let fullSourceUrl = path.resolve(context, sourceURL);
+        if (sourceMapUrlFormatter.match.test(fullSourceUrl)) {
+          formattedSourceUrl = sourceMapUrlFormatter.formatter(fullSourceUrl, this.rootContext);
+        }
+      }
+      /* SIQI HACK END */
 
       if (skipReading) {
         sourceContent = originalSourceContent;
       } else if (!errored && sourceURL) {
-        this.addDependency(sourceURL);
+        /* SIQI HACK START */
+        this.addDependency(formattedSourceUrl);
+        // this.addDependency(sourceURL);
+        /* SIQI HACK END */
       }
 
+      /* SIQI HACK START */
       // Return original value of `source` when error happens
-      return { sourceURL: errored ? source : sourceURL, sourceContent };
+      return { sourceURL: errored ? source : formattedSourceUrl, sourceContent };
+      /* SIQI HACK END */
     })
   );
 
